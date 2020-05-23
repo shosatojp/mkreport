@@ -8,23 +8,27 @@ JPEG_QUALITY=70
 `pdftk --version &>/dev/null`
 if [ "$?" != "0" ];then
     echo 'command not found: pdftk'
-    exit
+    exit 1
 fi
 
 `convert --version &>/dev/null`
 if [ "$?" != "0" ];then
     echo 'command not found: convert'
-    exit
+    exit 1
 fi
 
 echo "${inputs[@]} -> $output"
 
 for i in $inputs;do
+    if [ ! -f $i ];then
+        echo "file not found: $i"
+        exit 1
+    fi
     name=`echo $i | cut -f 1 -d '.'`
-    jpg=$name.jpg
+    jpg=$name.png
     pdf=$name.pdf
     echo "creating intermediate file: $jpg"
-    convert $i -quality $JPEG_QUALITY -type GrayScale $jpg
+    python3 `dirname ${BASH_SOURCE[0]}`/convert.py $i $jpg
     echo "creating intermediate file: $pdf"
     convert $jpg $pdf
     echo "removing intermediate file: $jpg"
