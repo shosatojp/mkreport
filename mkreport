@@ -1,0 +1,39 @@
+#!/bin/bash
+inputs="${@:1:$#-1}"
+output=${@:$#}
+pdfs=()
+
+JPEG_QUALITY=70
+
+`pdftk --version &>/dev/null`
+if [ "$?" != "0" ];then
+    echo 'command not found: pdftk'
+    exit
+fi
+
+`convert --version &>/dev/null`
+if [ "$?" != "0" ];then
+    echo 'command not found: convert'
+    exit
+fi
+
+echo "${inputs[@]} -> $output"
+
+for i in $inputs;do
+    name=`echo $i | cut -f 1 -d '.'`
+    jpg=$name.jpg
+    pdf=$name.pdf
+    echo "creating intermediate file: $jpg"
+    convert $i -quality $JPEG_QUALITY -type GrayScale $jpg
+    echo "creating intermediate file: $pdf"
+    convert $jpg $pdf
+    echo "removing intermediate file: $jpg"
+    rm $jpg
+    pdfs+=($pdf)
+done
+
+echo "creating output file: $output"
+pdftk ${pdfs[@]} cat output $output
+echo "removing intermediate file: ${pdfs[@]}"
+rm ${pdfs[@]}
+echo "done!"
