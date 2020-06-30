@@ -37,4 +37,4 @@ elif args.outtype == 'png':
     cv2.imwrite(output_filename, im, params=[cv2.IMWRITE_PNG_COMPRESSION, 9])
 
 
-print('output:', output_filename)
+# print('output:', output_filename)
