@@ -1,9 +1,45 @@
 #!/bin/bash
-inputs="${@:1:$#-1}"
-output=${@:$#}
-pdfs=()
+set -e
 
-JPEG_QUALITY=70
+COLOR_TYPE='binary'
+OUTPUT_TYPE='png'
+
+usage(){
+    echo "[-g] [-t grayscale_threshold]"
+}
+
+# parse args
+while getopts "g:th" 'opt'; do
+    case "$opt" in
+        g)
+            COLOR_TYPE='grayscale'
+            OUTPUT_TYPE='jpg'
+            ;;
+        t)
+            GRAYSCALE_THRESHOLD=${OPTARG}
+            ;;
+        h)
+            usage
+            exit
+            ;;
+    esac
+done
+
+if [[ ! $# > $OPTIND ]];then
+    echo "Error: no input or output"
+    exit 1
+fi
+
+inputs="${@:$OPTIND:$#-$OPTIND}"
+output=${@:$#}
+
+if [[ ! $output =~ \.pdf$ ]];then
+    echo "Warning: output is not a pdf"
+    read -p "continue? (y/N) " yn
+    case $yn in
+        [Nn]*|*) exit;;
+    esac
+fi
 
 `pdftk --version &>/dev/null`
 if [ "$?" != "0" ];then
@@ -19,25 +55,49 @@ fi
 
 echo "${inputs[@]} -> $output"
 
+convert_single(){
+    i=$1
+    jpg=$2
+    pdf=$3
+    if [ $COLOR_TYPE == 'binary' ];then
+        echo "creating intermediate file: $jpg"
+        python3 `dirname ${BASH_SOURCE[0]}`/convert.py -t $COLOR_TYPE -o $OUTPUT_TYPE $i $jpg
+        echo "creating intermediate file: $pdf"
+        convert -page a4 -density 72 $jpg $pdf
+        echo "removing intermediate file: $jpg"
+        rm $jpg
+    else
+        echo "creating intermediate file: $pdf"
+        convert -page a4 -density 72 $i $pdf
+    fi
+}
+
+pdfs=()
+intermediate=()
+
 for i in $inputs;do
     if [ ! -f $i ];then
-        echo "file not found: $i"
+        echo "File not found: $i"
         exit 1
     fi
-    name=`echo $i | cut -f 1 -d '.'`
-    jpg=$name.png
-    pdf=$name.pdf
-    echo "creating intermediate file: $jpg"
-    python3 `dirname ${BASH_SOURCE[0]}`/convert.py $i $jpg
-    echo "creating intermediate file: $pdf"
-    convert $jpg $pdf
-    echo "removing intermediate file: $jpg"
-    rm $jpg
-    pdfs+=($pdf)
+
+    if [[ $i =~ \.pdf$ ]];then
+        pdfs+=($i)
+    else
+        name=`echo $i | cut -f 1 -d '.'`
+        jpg=$name-$RANDOM.$OUTPUT_TYPE
+        pdf=$name-$RANDOM.pdf
+
+        convert_single $i $jpg $pdf &
+        pdfs+=($pdf)
+        intermediate+=($pdf)
+    fi
 done
+
+wait
 
 echo "creating output file: $output"
 pdftk ${pdfs[@]} cat output $output
-echo "removing intermediate file: ${pdfs[@]}"
-rm ${pdfs[@]}
+echo "removing intermediate file: ${intermediate[@]}"
+rm ${intermediate[@]}
 echo "done!"
