@@ -4,5 +4,9 @@
 
 ```sh
 # パスは通しておく
-mkreport a.png b.tiff c.jpg out.pdf
+mkreport a.pdf b.tiff c.jpg out.pdf
 ```
+
+いろいろまざっててもOK
+
+
