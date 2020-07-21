@@ -3,13 +3,14 @@ set -e
 
 COLOR_TYPE='binary'
 OUTPUT_TYPE='png'
+GRAYSCALE_THRESHOLD=245
 
 usage(){
     echo "[-g] [-t grayscale_threshold]"
 }
 
 # parse args
-while getopts "g:th" 'opt'; do
+while getopts "gt:h" 'opt'; do
     case "$opt" in
         g)
             COLOR_TYPE='grayscale'
@@ -62,7 +63,7 @@ convert_single(){
     pdf=$3
     if [ $COLOR_TYPE == 'binary' ];then
         echo "[$BASHPID] creating intermediate file: $jpg"
-        python3 `dirname ${BASH_SOURCE[0]}`/convert.py -t $COLOR_TYPE -o $OUTPUT_TYPE $i $jpg || exit 1
+        python3 `dirname ${BASH_SOURCE[0]}`/convert.py -t $COLOR_TYPE -o $OUTPUT_TYPE -g $GRAYSCALE_THRESHOLD $i $jpg || exit 1
         echo "[$BASHPID] creating intermediate file: $pdf"
         convert -page a4 -density 72 $jpg $pdf || exit 1
         echo "[$BASHPID] removing intermediate file: $jpg"
