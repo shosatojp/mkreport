@@ -3,7 +3,7 @@ set -e
 
 COLOR_TYPE='binary'
 OUTPUT_TYPE='png'
-GRAYSCALE_THRESHOLD=245
+GRAYSCALE_THRESHOLD=220
 
 usage(){
     echo "[-g] [-t grayscale_threshold]"
@@ -26,13 +26,16 @@ while getopts "gt:h" 'opt'; do
     esac
 done
 
-if [[ ! $# > $OPTIND ]];then
-    echo "Error: no input or output"
-    exit 1
-fi
-
 readonly inputs="${@:$OPTIND:$#-$OPTIND}"
 readonly output=${@:$#}
+
+# if [[ ! $# > $OPTIND ]];then
+#     echo inputs: ${inputs[@]}
+#     echo output: $output
+#     echo "Error: no input or output"
+#     exit 1
+# fi
+
 
 if [[ ! $output =~ \.pdf$ ]];then
     echo "Warning: output is not a pdf"
@@ -77,25 +80,36 @@ convert_single(){
 pdfs=()
 intermediate=()
 pids=()
+count=0
 
 for i in $inputs;do
-    if [ ! -f $i ];then
+    src=$i
+
+    if [[ $src =~ ^: ]];then
+        tmp="$output.$count.tiff"
+        echo "scan image as '$tmp' (press [Enter])"
+        read
+        scanimage -d 'epkowa:interpreter:001:003' --scan-area A4  --resolution 400 --mode Gray --format tiff > $tmp
+        src=$tmp
+    elif [ ! -f $i ];then
         echo "File not found: $i"
         exit 1
     fi
 
-    if [[ $i =~ \.pdf$ ]];then
-        pdfs+=($i)
+    if [[ $src =~ \.pdf$ ]];then
+        pdfs+=($src)
     else
-        name=`echo $i | cut -f 1 -d '.'`
+        name=`echo $src | cut -f 1 -d '.'`
         jpg=$name-$RANDOM.$OUTPUT_TYPE
         pdf=$name-$RANDOM.pdf
 
-        convert_single $i $jpg $pdf &
+        convert_single $src $jpg $pdf &
         pids+=($!)
         pdfs+=($pdf)
         intermediate+=($pdf $jpg)
     fi
+
+    count=$(($count+1))
 done
 
 # wait

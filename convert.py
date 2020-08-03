@@ -7,7 +7,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--type', type=str, choices=['grayscale', 'binary'], default=False, required=False)
 parser.add_argument('-q', '--quality', type=int, default=70, help='quality')
-parser.add_argument('-g', '--grayscale_threshold', type=int, default=245, help='grayscale threshold')
+parser.add_argument('-g', '--grayscale_threshold', type=int, default=210, help='grayscale threshold')
 parser.add_argument('-o', '--outtype', type=str, choices=['jpg', 'png'], required=True, help='output image type')
 parser.add_argument('input')
 parser.add_argument('output')
