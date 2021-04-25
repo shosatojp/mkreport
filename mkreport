@@ -3,21 +3,31 @@ set -e
 
 COLOR_TYPE='binary'
 OUTPUT_TYPE='png'
-GRAYSCALE_THRESHOLD=220
+GRAYSCALE_THRESHOLD=200
 
 usage(){
-    echo "[-g] [-t grayscale_threshold]"
+    echo "[-c] [-g] [-t grayscale_threshold]"
+    echo "-t    grayscale threshold (binary)"
+    echo "-g    grayscale"
+    echo "-c    color"
 }
 
 # parse args
-while getopts "gt:h" 'opt'; do
+while getopts "cgt:d:h" 'opt'; do
     case "$opt" in
         g)
             COLOR_TYPE='grayscale'
             OUTPUT_TYPE='jpg'
             ;;
+        c)
+            COLOR_TYPE='color'
+            OUTPUT_TYPE='jpg'
+            ;;
         t)
             GRAYSCALE_THRESHOLD=${OPTARG}
+            ;;
+        d)
+            DEVICE=${OPTARG}
             ;;
         h)
             usage
@@ -28,13 +38,6 @@ done
 
 readonly inputs="${@:$OPTIND:$#-$OPTIND}"
 readonly output=${@:$#}
-
-# if [[ ! $# > $OPTIND ]];then
-#     echo inputs: ${inputs[@]}
-#     echo output: $output
-#     echo "Error: no input or output"
-#     exit 1
-# fi
 
 
 if [[ ! $output =~ \.pdf$ ]];then
@@ -72,8 +75,15 @@ convert_single(){
         echo "[$BASHPID] removing intermediate file: $jpg"
         rm $jpg
     else
+        echo "[$BASHPID] creating intermediate file: $jpg"
         echo "[$BASHPID] creating intermediate file: $pdf"
-        convert -page a4 -density 72 $i $pdf || exit 1
+        if [ $COLOR_TYPE == 'grayscale' ];then
+            convert -type GrayScale -resize 3000x2000 -page a4 -quality 90 $i $jpg
+        else
+            convert -resize 3000x2000 -page a4 -quality 90 $i $jpg
+        fi
+        echo "[$BASHPID] removing intermediate file: $jpg"
+        convert -page a4 -density 72 $jpg $pdf || exit 1
     fi
 }
 
@@ -89,7 +99,11 @@ for i in $inputs;do
         tmp="$output.$count.tiff"
         echo "scan image as '$tmp' (press [Enter])"
         read
-        scanimage -d 'epkowa:interpreter:001:003' --scan-area A4  --resolution 400 --mode Gray --format tiff > $tmp
+        if [ $COLOR_TYPE == 'color' ];then
+            scanimage -d $DEVICE --scan-area A4  --resolution 400 --mode Color --format tiff > $tmp
+        else
+            scanimage -d $DEVICE --scan-area A4  --resolution 400 --mode Gray --format tiff > $tmp
+        fi
         src=$tmp
     elif [ ! -f $i ];then
         echo "File not found: $i"
